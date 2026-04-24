@@ -129,6 +129,18 @@
           <tbody id="input-tbody" class="divide-y divide-slate-100">
             <!-- Rows injected by JS -->
           </tbody>
+          <tfoot class="bg-slate-50/80 border-t-2 border-slate-200">
+            <tr>
+              <td class="px-4 py-3"></td>
+              <td class="px-2 py-3 text-center font-extrabold text-slate-700 text-[15px]">합계</td>
+              <td class="px-2 py-3 text-center">
+                <div class="bg-white border-2 border-slate-200 px-3 py-1.5 rounded-lg text-right shadow-inner w-full min-w-[80px]">
+                  <span id="input-total-amount" class="text-[17px] font-extrabold text-blue-600 tracking-tight">0.0</span>
+                </div>
+              </td>
+              <td class="px-3 py-3 text-left font-bold text-slate-600 text-[15px]" colspan="4">억원</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
@@ -340,7 +352,7 @@
           <input type="text" id="${rowId}-name" value="${name}" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="항목명">
         </td>
         <td class="px-2 py-2">
-          <input type="number" id="${rowId}-amount" value="${amount}" step="0.1" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-right font-medium text-slate-700" placeholder="0.0">
+          <input type="number" id="${rowId}-amount" value="${amount}" step="0.1" oninput="updateTotalInvestment()" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-right font-medium text-slate-700" placeholder="0.0">
         </td>
         <td class="px-2 py-2">
           <select id="${rowId}-level" onchange="handleLevelChange('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer font-medium text-slate-700">
@@ -367,10 +379,24 @@
 
       // Initialize dropdowns logic
       handleLevelChange(rowId, initLarge, initSub);
+      updateTotalInvestment();
     }
 
     function removeRow(rowId) {
       document.getElementById(rowId).remove();
+      updateTotalInvestment();
+    }
+
+    function updateTotalInvestment() {
+      const rows = document.getElementById('input-tbody').getElementsByTagName('tr');
+      let total = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const amountInput = document.getElementById(`${rows[i].id}-amount`);
+        if(amountInput) {
+          total += parseFloat(amountInput.value) || 0;
+        }
+      }
+      document.getElementById('input-total-amount').innerText = total.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     }
 
     // Cascading Dropdown Logic
