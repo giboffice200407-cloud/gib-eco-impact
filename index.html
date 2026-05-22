@@ -334,6 +334,61 @@
       }
     }
 
+    const KEYWORD_MAP = [
+      { keywords: ['건축', '건물', '공사', '건설', '센터'], level: '중·소분류', large: '건설업', sub: '건물 건설' },
+      { keywords: ['장비', '기계', '설비', '인프라', '구축'], level: '중·소분류', large: '공산품', sub: '기계 및 장비' },
+      { keywords: ['연구', '개발', 'r&d', '용역', '기획', '평가'], level: '중·소분류', large: '서비스업', sub: '전문, 과학 및 기술 서비스' },
+      { keywords: ['산업화', '사업화', '마케팅', '컨설팅', '시제품', '지원', '기업육성', '인증'], level: '중·소분류', large: '서비스업', sub: '사업지원서비스' },
+      { keywords: ['전산', 'it', '소프트웨어', '서버', '플랫폼', 'pc', '시스템'], level: '중·소분류', large: '공산품', sub: '컴퓨터, 전자 및 광학기기' },
+      { keywords: ['의료', '바이오', '보건', '복지', '임상', '치료'], level: '중·소분류', large: '서비스업', sub: '보건 및 사회복지서비스' },
+      { keywords: ['토목', '부지', '도로'], level: '대분류', large: '건설업', sub: '' },
+      { keywords: ['예비비', '운영비', '일반', '기타'], level: '전산업 평균', large: '', sub: '' }
+    ];
+
+    const manualOverrideTracker = {};
+
+    function markManualOverride(rowId) {
+      manualOverrideTracker[rowId] = true;
+    }
+
+    function autoRecommendCategory(rowId) {
+      if (manualOverrideTracker[rowId]) return; 
+      const nameInput = document.getElementById(`${rowId}-name`);
+      if (!nameInput) return;
+      
+      const val = nameInput.value.toLowerCase().trim();
+      if (!val) return;
+
+      for (const item of KEYWORD_MAP) {
+        for (const kw of item.keywords) {
+          if (val.includes(kw)) {
+            const levelSel = document.getElementById(`${rowId}-level`);
+            const currentLarge = document.getElementById(`${rowId}-large`)?.value;
+            const currentSub = document.getElementById(`${rowId}-sub`)?.value;
+            
+            // 기존 값과 다를 때만 업데이트하고 알림 표시
+            if (levelSel.value !== item.level || currentLarge !== item.large || currentSub !== item.sub) {
+              levelSel.value = item.level;
+              handleLevelChange(rowId, item.large, item.sub);
+              
+              // 추천 알림 뱃지 표시
+              const badge = document.getElementById(`${rowId}-recommend-badge`);
+              if (badge) {
+                badge.classList.remove('opacity-0');
+                badge.classList.add('opacity-100');
+                clearTimeout(badge.timeoutId);
+                badge.timeoutId = setTimeout(() => {
+                  badge.classList.remove('opacity-100');
+                  badge.classList.add('opacity-0');
+                }, 3000); // 3초 후 서서히 사라짐
+              }
+            }
+            return;
+          }
+        }
+      }
+    }
+
     function addRow(name = '', amount = '', initLevel = '전산업 평균', initLarge = '', initSub = '') {
       const container = document.getElementById('input-tbody');
       const rowId = `row-${rowCount++}`;
@@ -349,24 +404,27 @@
           </button>
         </td>
         <td class="px-2 py-2">
-          <input type="text" id="${rowId}-name" value="${name}" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="항목명">
+          <div class="relative">
+            <input type="text" id="${rowId}-name" value="${name}" oninput="autoRecommendCategory('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none pr-14" placeholder="항목명 (예: 건축, 장비, R&D)">
+            <div id="${rowId}-recommend-badge" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-1 rounded font-extrabold opacity-0 transition-opacity duration-300 pointer-events-none shadow-sm border border-blue-200">✨추천</div>
+          </div>
         </td>
         <td class="px-2 py-2">
           <input type="number" id="${rowId}-amount" value="${amount}" step="0.1" oninput="updateTotalInvestment()" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-right font-medium text-slate-700" placeholder="0.0">
         </td>
         <td class="px-2 py-2">
-          <select id="${rowId}-level" onchange="handleLevelChange('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer font-medium text-slate-700">
+          <select id="${rowId}-level" onchange="markManualOverride('${rowId}'); handleLevelChange('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer font-medium text-slate-700">
             <option value="전산업 평균" ${initLevel === '전산업 평균' ? 'selected' : ''}>전산업 평균</option>
             <option value="대분류" ${initLevel === '대분류' ? 'selected' : ''}>대분류</option>
             <option value="중·소분류" ${initLevel === '중·소분류' ? 'selected' : ''}>중·소분류</option>
           </select>
         </td>
         <td class="px-2 py-2">
-          <select id="${rowId}-large" onchange="handleLargeChange('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed">
+          <select id="${rowId}-large" onchange="markManualOverride('${rowId}'); handleLargeChange('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed">
           </select>
         </td>
         <td class="px-2 py-2">
-          <select id="${rowId}-sub" onchange="updateCoefDisplay('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed">
+          <select id="${rowId}-sub" onchange="markManualOverride('${rowId}'); updateCoefDisplay('${rowId}')" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed">
           </select>
         </td>
         <td class="px-4 py-2 bg-indigo-50/50">
